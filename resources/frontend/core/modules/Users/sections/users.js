@@ -218,72 +218,60 @@ export function fieldsToFillProvider() {
             default: 'employee',
         },
         {
-            // Employee ID field - new addition for employee information
             label: 'field.employee_id',
             key: 'employee_id',
             type: 'input',
             placeholder: 'field.employee_id',
-            tooltipValue: 'tooltip.employee_id', // Employee identification number
+            tooltipValue: 'tooltip.employee_id',
             displayable: context => {
-                // Only show for employee type users
                 return context.values.type === 'employee' || !context.values.type;
             },
-            // Custom render function to handle nested employeeInfo data
             render(h, props) {
-                // Extract employee_id from nested employeeInfo object when editing
-                if (props.values.employee_info && props.values.employee_info.employee_id && !props.currentValue) {
-                    props.currentValue = props.values.employee_info.employee_id;
-                    props.inputHandler(props.currentValue);
-                } else if (props.values.employeeInfo && props.values.employeeInfo.employee_id && !props.currentValue) {
-                    props.currentValue = props.values.employeeInfo.employee_id;
-                    props.inputHandler(props.currentValue);
+                let value = props.currentValue;
+                // Initialize value from employeeInfo or employee_info when editing
+                if (!value || typeof value === 'object') {
+                    value = props.values.employeeInfo?.employee_id || props.values.employee_info?.employee_id || '';
+                    props.inputHandler(value);
                 }
-                
                 return h('at-input', {
                     props: {
-                        value: props.currentValue || '',
+                        value: value || '',
                         placeholder: props.field.placeholder,
                     },
                     on: {
-                        input(value) {
-                            props.inputHandler(value);
+                        input(val) {
+                            props.inputHandler(val);
                         },
                     },
                 });
             },
         },
         {
-            // Joined Date field - new addition for employee information
             label: 'field.joined_date',
             key: 'joined_date',
             type: 'input',
             frontendType: 'date',
             placeholder: 'field.joined_date',
-            tooltipValue: 'tooltip.joined_date', // Date when employee joined the company
+            tooltipValue: 'tooltip.joined_date',
             displayable: context => {
-                // Only show for employee type users
                 return context.values.type === 'employee' || !context.values.type;
             },
-            // Custom render function to handle nested employeeInfo data
             render(h, props) {
-                // Extract joined_date from nested employeeInfo object when editing
-                if (props.values.employee_info && props.values.employee_info.joined_date && !props.currentValue) {
-                    props.currentValue = props.values.employee_info.joined_date;
-                    props.inputHandler(props.currentValue);
-                } else if (props.values.employeeInfo && props.values.employeeInfo.joined_date && !props.currentValue) {
-                    props.currentValue = props.values.employeeInfo.joined_date;
-                    props.inputHandler(props.currentValue);
+                let value = props.currentValue;
+                // Initialize value from employeeInfo or employee_info when editing
+                if (!value || typeof value === 'object') {
+                    value = props.values.employeeInfo?.joined_date || props.values.employee_info?.joined_date || '';
+                    props.inputHandler(value);
                 }
-                
                 return h('at-input', {
                     props: {
-                        value: props.currentValue || '',
+                        value: value || '',
                         type: 'date',
                         placeholder: props.field.placeholder,
                     },
                     on: {
-                        input(value) {
-                            props.inputHandler(value);
+                        input(val) {
+                            props.inputHandler(val);
                         },
                     },
                 });
