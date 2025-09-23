@@ -542,26 +542,26 @@ export default (context, router) => {
             title: 'field.email',
             key: 'email',
         },
-        {
-            // Employee ID column - shows employee identification number
-            title: 'field.employee_id',
-            key: 'employee_info_employee_id',
-            render(h, { item }) {
-                // Access employee info from the nested relationship (handle both camelCase and snake_case)
-                const employeeId = item.employee_info?.employee_id || item.employeeInfo?.employee_id;
-                return h('span', employeeId || '-');
-            },
-        },
-        {
-            // Joined Date column - shows when employee joined the company
-            title: 'field.joined_date',
-            key: 'employee_info_joined_date',
-            render(h, { item }) {
-                // Access employee info from the nested relationship (handle both camelCase and snake_case)
-                const joinedDate = item.employee_info?.joined_date || item.employeeInfo?.joined_date;
-                return h('span', joinedDate ? new Date(joinedDate).toLocaleDateString() : '-');
-            },
-        },
+        // {
+        //     // Employee ID column - shows employee identification number
+        //     title: 'field.employee_id',
+        //     key: 'employee_info_employee_id',
+        //     render(h, { item }) {
+        //         // Access employee info from the nested relationship (handle both camelCase and snake_case)
+        //         const employeeId = item.employee_info?.employee_id || item.employeeInfo?.employee_id;
+        //         return h('span', employeeId || '-');
+        //     },
+        // },
+        // {
+        //     // Joined Date column - shows when employee joined the company
+        //     title: 'field.joined_date',
+        //     key: 'employee_info_joined_date',
+        //     render(h, { item }) {
+        //         // Access employee info from the nested relationship (handle both camelCase and snake_case)
+        //         const joinedDate = item.employee_info?.joined_date || item.employeeInfo?.joined_date;
+        //         return h('span', joinedDate ? new Date(joinedDate).toLocaleDateString() : '-');
+        //     },
+        // },
     ]);
 
     grid.addAction([
