@@ -32,6 +32,9 @@ class CreateUserRequest extends CattrFormRequest
             'role_id' => ['required', new Enum(Role::class)],
             'type' => 'required|string',
             'web_and_app_monitoring' => 'sometimes|required|bool',
+            // New employee information fields
+            'employee_id' => 'nullable|string|max:255', // Employee ID - optional field
+            'joined_date' => 'nullable|date', // Joined Date - optional date field
         ];
     }
 }

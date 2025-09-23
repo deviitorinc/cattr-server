@@ -44,6 +44,9 @@ class EditUserRequest extends CattrFormRequest
             'project_roles.*.role_id' => ['required', new Enum(Role::class)],
             'type' => 'sometimes|required|string',
             'web_and_app_monitoring' => 'sometimes|required|bool',
+            // Employee information fields for editing
+            'employee_id' => 'nullable|string|max:255', // Employee ID - optional field
+            'joined_date' => 'nullable|date', // Joined Date - optional date field
         ];
     }
 }

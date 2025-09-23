@@ -218,6 +218,78 @@ export function fieldsToFillProvider() {
             default: 'employee',
         },
         {
+            // Employee ID field - new addition for employee information
+            label: 'field.employee_id',
+            key: 'employee_id',
+            type: 'input',
+            placeholder: 'field.employee_id',
+            tooltipValue: 'tooltip.employee_id', // Employee identification number
+            displayable: context => {
+                // Only show for employee type users
+                return context.values.type === 'employee' || !context.values.type;
+            },
+            // Custom render function to handle nested employeeInfo data
+            render(h, props) {
+                // Extract employee_id from nested employeeInfo object when editing
+                if (props.values.employee_info && props.values.employee_info.employee_id && !props.currentValue) {
+                    props.currentValue = props.values.employee_info.employee_id;
+                    props.inputHandler(props.currentValue);
+                } else if (props.values.employeeInfo && props.values.employeeInfo.employee_id && !props.currentValue) {
+                    props.currentValue = props.values.employeeInfo.employee_id;
+                    props.inputHandler(props.currentValue);
+                }
+                
+                return h('at-input', {
+                    props: {
+                        value: props.currentValue || '',
+                        placeholder: props.field.placeholder,
+                    },
+                    on: {
+                        input(value) {
+                            props.inputHandler(value);
+                        },
+                    },
+                });
+            },
+        },
+        {
+            // Joined Date field - new addition for employee information
+            label: 'field.joined_date',
+            key: 'joined_date',
+            type: 'input',
+            frontendType: 'date',
+            placeholder: 'field.joined_date',
+            tooltipValue: 'tooltip.joined_date', // Date when employee joined the company
+            displayable: context => {
+                // Only show for employee type users
+                return context.values.type === 'employee' || !context.values.type;
+            },
+            // Custom render function to handle nested employeeInfo data
+            render(h, props) {
+                // Extract joined_date from nested employeeInfo object when editing
+                if (props.values.employee_info && props.values.employee_info.joined_date && !props.currentValue) {
+                    props.currentValue = props.values.employee_info.joined_date;
+                    props.inputHandler(props.currentValue);
+                } else if (props.values.employeeInfo && props.values.employeeInfo.joined_date && !props.currentValue) {
+                    props.currentValue = props.values.employeeInfo.joined_date;
+                    props.inputHandler(props.currentValue);
+                }
+                
+                return h('at-input', {
+                    props: {
+                        value: props.currentValue || '',
+                        type: 'date',
+                        placeholder: props.field.placeholder,
+                    },
+                    on: {
+                        input(value) {
+                            props.inputHandler(value);
+                        },
+                    },
+                });
+            },
+        },
+        {
             label: 'field.web_and_app_monitoring',
             key: 'web_and_app_monitoring',
             type: 'checkbox',
@@ -328,6 +400,28 @@ export default (context, router) => {
             key: 'type',
             render: (h, { currentValue }) => {
                 return h('span', i18n.t(`field.types.${currentValue}`));
+            },
+        },
+        {
+            // Employee ID display field - shows employee identification number
+            label: 'field.employee_id',
+            key: 'employee_id',
+            render: (h, { item }) => {
+                const employeeId = item.employeeInfo?.employee_id || item.employee_info?.employee_id;
+                return h('span', employeeId || '-');
+            },
+        },
+        {
+            // Joined Date display field - shows when employee joined the company
+            label: 'field.joined_date',
+            key: 'joined_date',
+            render: (h, { item }) => {
+                const joinedDate = item.employeeInfo?.joined_date || item.employee_info?.joined_date;
+                if (joinedDate) {
+                    const date = new Date(joinedDate);
+                    return h('span', date.toLocaleDateString());
+                }
+                return h('span', '-');
             },
         },
         {
@@ -459,6 +553,26 @@ export default (context, router) => {
         {
             title: 'field.email',
             key: 'email',
+        },
+        {
+            // Employee ID column - shows employee identification number
+            title: 'field.employee_id',
+            key: 'employee_info_employee_id',
+            render(h, { item }) {
+                // Access employee info from the nested relationship (handle both camelCase and snake_case)
+                const employeeId = item.employee_info?.employee_id || item.employeeInfo?.employee_id;
+                return h('span', employeeId || '-');
+            },
+        },
+        {
+            // Joined Date column - shows when employee joined the company
+            title: 'field.joined_date',
+            key: 'employee_info_joined_date',
+            render(h, { item }) {
+                // Access employee info from the nested relationship (handle both camelCase and snake_case)
+                const joinedDate = item.employee_info?.joined_date || item.employeeInfo?.joined_date;
+                return h('span', joinedDate ? new Date(joinedDate).toLocaleDateString() : '-');
+            },
         },
     ]);
 

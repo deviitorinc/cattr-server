@@ -27,6 +27,7 @@ use App\Http\Requests\User\DestroyUserRequest;
 use App\Models\Setting;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class UserController extends ItemController
@@ -158,6 +159,20 @@ class UserController extends ItemController
      */
     public function index(ListUsersRequest $request): JsonResponse
     {
+        // Add employeeInfo to the with relationships for user list requests
+        $requestData = $request->validated();
+        
+        // Ensure we always include employee info in user list requests
+        if (!isset($requestData['with'])) {
+            $requestData['with'] = [];
+        }
+        if (!in_array('employeeInfo', $requestData['with'])) {
+            $requestData['with'][] = 'employeeInfo';
+        }
+        
+        // Create a new request with the updated data
+        $request->merge($requestData);
+        
         return $this->_index($request);
     }
 
@@ -270,7 +285,37 @@ class UserController extends ItemController
             return $requestData;
         });
 
-        return $this->_create($request);
+        // Custom logic to handle employee information
+        $requestData = Filter::process(Filter::getRequestFilterName(), $request->validated());
+        
+        CatEvent::dispatch(Filter::getBeforeActionEventName(), [$requestData]);
+
+        // Extract employee information from request data
+        $employeeId = $requestData['employee_id'] ?? null;
+        $joinedDate = $requestData['joined_date'] ?? null;
+        
+        // Remove employee fields from user data as they're not part of the User model
+        unset($requestData['employee_id'], $requestData['joined_date']);
+
+        /** @var User $user */
+        $user = User::create($requestData);
+
+        // Create employee information if provided
+        if ($employeeId || $joinedDate) {
+            $user->employeeInfo()->create([
+                'employee_id' => $employeeId,
+                'joined_date' => $joinedDate,
+            ]);
+        }
+
+        // Load the employee info relationship for the response
+        $user->load('employeeInfo');
+
+        $user = Filter::process(Filter::getActionFilterName(), $user);
+
+        CatEvent::dispatch(Filter::getAfterActionEventName(), [$user, $requestData]);
+
+        return responder()->success($user)->respond();
     }
 
     /**
@@ -369,7 +414,46 @@ class UserController extends ItemController
             return $user;
         });
 
-        return $this->_edit($request);
+        // Custom logic to handle employee information updates
+        $requestData = Filter::process(Filter::getRequestFilterName(), $request->validated());
+        
+        CatEvent::dispatch(Filter::getBeforeActionEventName(), [$requestData]);
+
+        // Find the user
+        $user = User::find($requestData['id']);
+        if (!$user) {
+            throw new NotFoundHttpException;
+        }
+
+        // Extract employee information from request data
+        $employeeId = $requestData['employee_id'] ?? null;
+        $joinedDate = $requestData['joined_date'] ?? null;
+        
+        // Remove employee fields from user data as they're not part of the User model
+        unset($requestData['employee_id'], $requestData['joined_date']);
+
+        // Update user data
+        $user->update($requestData);
+
+        // Update or create employee information
+        if (isset($request->validated()['employee_id']) || isset($request->validated()['joined_date'])) {
+            $user->employeeInfo()->updateOrCreate(
+                ['user_id' => $user->id],
+                [
+                    'employee_id' => $employeeId,
+                    'joined_date' => $joinedDate,
+                ]
+            );
+        }
+
+        // Load the employee info relationship for the response
+        $user->load('employeeInfo');
+
+        $user = Filter::process(Filter::getActionFilterName(), $user);
+
+        CatEvent::dispatch(Filter::getAfterActionEventName(), [$user, $requestData]);
+
+        return responder()->success($user)->respond();
     }
 
     /**
@@ -408,7 +492,37 @@ class UserController extends ItemController
      */
     public function show(ShowUserRequest $request): JsonResponse
     {
-        return $this->_show($request);
+        $requestData = Filter::process(Filter::getRequestFilterName(), $request->validated());
+
+        $itemId = (int)$requestData['id'];
+
+        if (!$itemId) {
+            throw new NotFoundHttpException;
+        }
+
+        $filters = [
+            'where' => ['id' => $itemId],
+            // Always include employee info in user show requests
+            'with' => array_merge($requestData['with'] ?? [], ['employeeInfo'])
+        ];
+
+        if (!empty($requestData['withSum'])) {
+            $filters['withSum'] = $requestData['withSum'];
+        }
+
+        CatEvent::dispatch(Filter::getBeforeActionEventName(), $filters);
+
+        $itemsQuery = $this->getQuery($filters ?: []);
+
+        $item = Filter::process(Filter::getActionFilterName(), $itemsQuery->first());
+
+        if (!$item) {
+            throw new NotFoundHttpException;
+        }
+
+        CatEvent::dispatch(Filter::getAfterActionEventName(), [$item, $filters]);
+
+        return responder()->success($item)->respond();
     }
 
     /**
