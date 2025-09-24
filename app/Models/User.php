@@ -234,15 +234,6 @@ class User extends Authenticatable
         return $this->hasMany(ProjectsUsers::class, 'user_id', 'id');
     }
 
-    /**
-     * Get the employee information associated with the user.
-     * This relationship stores additional employee data like Employee ID and Joined Date
-     */
-    public function employeeInfo(): \Illuminate\Database\Eloquent\Relations\HasOne
-    {
-        return $this->hasOne(UserEmployeeInfo::class);
-    }
-
     public function tasks(): BelongsToMany
     {
         return $this->belongsToMany(Task::class, 'tasks_users', 'user_id', 'task_id');
