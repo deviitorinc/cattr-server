@@ -429,16 +429,28 @@ export default (context, router) => {
             label: 'field.employee_id',
             key: 'employee_info.employee_id',
             displayable: context => context.values.type === 'employee' && context.values.employee_info,
-            render: (h, { currentValue }) => {
-                return h('span', currentValue || '—');
+            render: (h, { values }) => {
+                // If currentValue is empty, try to get it from the nested object
+                const employeeId = values.employee_info ? values.employee_info.employee_id : null;
+                return h('span', employeeId || '—');
             },
         },
         {
             label: 'field.date_of_joined',
             key: 'employee_info.date_of_joined',
             displayable: context => context.values.type === 'employee' && context.values.employee_info,
-            render: (h, { currentValue }) => {
-                return h('span', currentValue || '—');
+            render: (h, { values }) => {
+                // If currentValue is empty, try to get it from the nested object
+                let dateOfJoined = values.employee_info ? values.employee_info.date_of_joined : null;
+                
+                // Format the date for display (remove time part if present)
+                if (dateOfJoined && typeof dateOfJoined === 'string') {
+                    if (dateOfJoined.includes('T')) {
+                        dateOfJoined = dateOfJoined.split('T')[0];
+                    }
+                }
+                
+                return h('span', dateOfJoined || '—');
             },
         },
     ];
