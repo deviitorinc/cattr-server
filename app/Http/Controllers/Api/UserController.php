@@ -13,6 +13,7 @@ use Exception;
 use Filter;
 use App\Mail\UserCreated;
 use App\Models\User;
+use App\Models\EmployeeInfo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -159,20 +160,10 @@ class UserController extends ItemController
      */
     public function index(ListUsersRequest $request): JsonResponse
     {
-        // Add employeeInfo to the with relationships for user list requests
-        $requestData = $request->validated();
-        
-        // Ensure we always include employee info in user list requests
-        if (!isset($requestData['with'])) {
-            $requestData['with'] = [];
-        }
-        if (!in_array('employeeInfo', $requestData['with'])) {
-            $requestData['with'][] = 'employeeInfo';
-        }
-        
-        // Create a new request with the updated data
-        $request->merge($requestData);
-        
+        Filter::listen(Filter::getActionFilterName(), static function ($users) {
+            return $users->load('employeeInfo');
+        });
+      
         return $this->_index($request);
     }
 
@@ -279,43 +270,41 @@ class UserController extends ItemController
      */
     public function create(CreateUserRequest $request): JsonResponse
     {
+        \Log::info('UserController create method called', $request->validated());
+        
         Filter::listen(Filter::getRequestFilterName(), static function ($requestData) use ($request) {
             $requestData['screenshots_state_locked'] = $request->user()->isAdmin() && ScreenshotsState::tryFrom($requestData['screenshots_state'])->mustBeInherited();
 
             return $requestData;
         });
 
-        // Custom logic to handle employee information
-        $requestData = Filter::process(Filter::getRequestFilterName(), $request->validated());
-        
-        CatEvent::dispatch(Filter::getBeforeActionEventName(), [$requestData]);
-
-        // Extract employee information from request data
-        $employeeId = $requestData['employee_id'] ?? null;
-        $joinedDate = $requestData['joined_date'] ?? null;
-        
-        // Remove employee fields from user data as they're not part of the User model
-        unset($requestData['employee_id'], $requestData['joined_date']);
-
-        /** @var User $user */
-        $user = User::create($requestData);
-
-        // Create employee information if provided
-        if ($employeeId || $joinedDate) {
-            $user->employeeInfo()->create([
-                'employee_id' => $employeeId,
-                'joined_date' => $joinedDate,
+        CatEvent::listen(Filter::getAfterActionEventName(), static function ($user, $requestData) {
+            // Create employee info if user type is employee
+            \Log::info('UserController create afterAction event triggered', [
+                'user_type' => $user->type,
+                'request_data' => $requestData,
+                'has_employee_id' => isset($requestData['employee_id']),
+                'has_date_of_joined' => isset($requestData['date_of_joined']),
             ]);
-        }
+            
+            if ($user->type === 'employee' && isset($requestData['employee_id'], $requestData['date_of_joined'])) {
+                \Log::info('Creating employee info', [
+                    'user_id' => $user->id,
+                    'employee_id' => $requestData['employee_id'],
+                    'date_of_joined' => $requestData['date_of_joined'],
+                ]);
+                
+                $employeeInfo = $user->employeeInfo()->create([
+                    'employee_id' => $requestData['employee_id'],
+                    'date_of_joined' => $requestData['date_of_joined'],
+                ]);
+                
+                \Log::info('Employee info created', ['employee_info_id' => $employeeInfo->id]);
+                $user->load('employeeInfo');
+            }
+        });
 
-        // Load the employee info relationship for the response
-        $user->load('employeeInfo');
-
-        $user = Filter::process(Filter::getActionFilterName(), $user);
-
-        CatEvent::dispatch(Filter::getAfterActionEventName(), [$user, $requestData]);
-
-        return responder()->success($user)->respond();
+        return $this->_create($request);
     }
 
     /**
@@ -414,46 +403,24 @@ class UserController extends ItemController
             return $user;
         });
 
-        // Custom logic to handle employee information updates
-        $requestData = Filter::process(Filter::getRequestFilterName(), $request->validated());
-        
-        CatEvent::dispatch(Filter::getBeforeActionEventName(), [$requestData]);
+        CatEvent::listen(Filter::getAfterActionEventName(), static function ($user, $requestData) {
+            // Handle employee info for employee type users
+            if ($user->type === 'employee' && isset($requestData['employee_id'], $requestData['date_of_joined'])) {
+                $user->employeeInfo()->updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'employee_id' => $requestData['employee_id'],
+                        'date_of_joined' => $requestData['date_of_joined'],
+                    ]
+                );
+            } elseif ($user->type !== 'employee') {
+                // Delete employee info if user type is no longer employee
+                $user->employeeInfo()->delete();
+            }
+            $user->load('employeeInfo');
+        });
 
-        // Find the user
-        $user = User::find($requestData['id']);
-        if (!$user) {
-            throw new NotFoundHttpException;
-        }
-
-        // Extract employee information from request data
-        $employeeId = $requestData['employee_id'] ?? null;
-        $joinedDate = $requestData['joined_date'] ?? null;
-        
-        // Remove employee fields from user data as they're not part of the User model
-        unset($requestData['employee_id'], $requestData['joined_date']);
-
-        // Update user data
-        $user->update($requestData);
-
-        // Update or create employee information
-        if (isset($request->validated()['employee_id']) || isset($request->validated()['joined_date'])) {
-            $user->employeeInfo()->updateOrCreate(
-                ['user_id' => $user->id],
-                [
-                    'employee_id' => $employeeId,
-                    'joined_date' => $joinedDate,
-                ]
-            );
-        }
-
-        // Load the employee info relationship for the response
-        $user->load('employeeInfo');
-
-        $user = Filter::process(Filter::getActionFilterName(), $user);
-
-        CatEvent::dispatch(Filter::getAfterActionEventName(), [$user, $requestData]);
-
-        return responder()->success($user)->respond();
+        return $this->_edit($request);
     }
 
     /**
@@ -492,37 +459,13 @@ class UserController extends ItemController
      */
     public function show(ShowUserRequest $request): JsonResponse
     {
-        $requestData = Filter::process(Filter::getRequestFilterName(), $request->validated());
+        Filter::listen(Filter::getActionFilterName(), static function ($user) {
+            // Always load employee info if it exists
+            $user->load('employeeInfo');
+            return $user;
+        });
 
-        $itemId = (int)$requestData['id'];
-
-        if (!$itemId) {
-            throw new NotFoundHttpException;
-        }
-
-        $filters = [
-            'where' => ['id' => $itemId],
-            // Always include employee info in user show requests
-            'with' => array_merge($requestData['with'] ?? [], ['employeeInfo'])
-        ];
-
-        if (!empty($requestData['withSum'])) {
-            $filters['withSum'] = $requestData['withSum'];
-        }
-
-        CatEvent::dispatch(Filter::getBeforeActionEventName(), $filters);
-
-        $itemsQuery = $this->getQuery($filters ?: []);
-
-        $item = Filter::process(Filter::getActionFilterName(), $itemsQuery->first());
-
-        if (!$item) {
-            throw new NotFoundHttpException;
-        }
-
-        CatEvent::dispatch(Filter::getAfterActionEventName(), [$item, $filters]);
-
-        return responder()->success($item)->respond();
+        return $this->_show($request);
     }
 
     /**

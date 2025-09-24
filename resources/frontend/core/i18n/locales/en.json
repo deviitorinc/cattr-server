@@ -304,6 +304,8 @@
       "employee": "Employee",
       "client": "Client"
     },
+    "employee_id": "Employee ID",
+    "date_of_joined": "Date of Joined",
     "work_time": "Working Hours",
     "notice": "Notice",
     "report": "Report",
