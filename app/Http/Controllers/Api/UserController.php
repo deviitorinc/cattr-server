@@ -459,9 +459,8 @@ class UserController extends ItemController
     public function show(ShowUserRequest $request): JsonResponse
     {
         Filter::listen(Filter::getActionFilterName(), static function ($user) {
-            if ($user->type === 'employee') {
-                $user->load('employeeInfo');
-            }
+            // Always load employee info if it exists
+            $user->load('employeeInfo');
             return $user;
         });
 

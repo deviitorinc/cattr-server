@@ -232,14 +232,21 @@ export function fieldsToFillProvider() {
             required: context => context.values.type === 'employee',
             render: (h, props) => {
                 // Handle initialization from nested employee_info
-                if (props.values.employee_info && props.values.employee_info.employee_id && !props.currentValue) {
-                    props.currentValue = props.values.employee_info.employee_id;
-                    props.inputHandler(props.currentValue);
+                let currentValue = props.currentValue;
+                
+                // If currentValue is not a valid string/number, try to get it from employee_info
+                if (!currentValue || (typeof currentValue === 'object' && currentValue !== null)) {
+                    if (props.values.employee_info && props.values.employee_info.employee_id) {
+                        currentValue = props.values.employee_info.employee_id;
+                        props.inputHandler(currentValue);
+                    } else {
+                        currentValue = '';
+                    }
                 }
                 
                 return h('at-input', {
                     props: {
-                        value: props.currentValue || '',
+                        value: String(currentValue || ''),
                         placeholder: 'field.employee_id',
                     },
                     on: {
@@ -260,14 +267,39 @@ export function fieldsToFillProvider() {
             required: context => context.values.type === 'employee',
             render: (h, props) => {
                 // Handle initialization from nested employee_info
-                if (props.values.employee_info && props.values.employee_info.date_of_joined && !props.currentValue) {
-                    props.currentValue = props.values.employee_info.date_of_joined;
-                    props.inputHandler(props.currentValue);
+                let currentValue = props.currentValue;
+                
+                // If currentValue is not a valid string/number, try to get it from employee_info
+                if (!currentValue || (typeof currentValue === 'object' && currentValue !== null)) {
+                    if (props.values.employee_info && props.values.employee_info.date_of_joined) {
+                        currentValue = props.values.employee_info.date_of_joined;
+                        props.inputHandler(currentValue);
+                    } else {
+                        currentValue = '';
+                    }
+                }
+                
+                // Format date for HTML input (YYYY-MM-DD format)
+                if (currentValue && typeof currentValue === 'string') {
+                    // If it's in ISO format (2024-01-15T00:00:00.000000Z), extract just the date part
+                    if (currentValue.includes('T')) {
+                        currentValue = currentValue.split('T')[0];
+                    }
+                    // If it's in MM/DD/YYYY format, convert to YYYY-MM-DD
+                    else if (currentValue.includes('/')) {
+                        const parts = currentValue.split('/');
+                        if (parts.length === 3) {
+                            const month = parts[0].padStart(2, '0');
+                            const day = parts[1].padStart(2, '0');
+                            const year = parts[2];
+                            currentValue = `${year}-${month}-${day}`;
+                        }
+                    }
                 }
                 
                 return h('at-input', {
                     props: {
-                        value: props.currentValue || '',
+                        value: String(currentValue || ''),
                         placeholder: 'field.date_of_joined',
                         type: 'date',
                     },
