@@ -222,72 +222,6 @@ export function fieldsToFillProvider() {
             key: 'employee_id',
             type: 'input',
             placeholder: 'field.employee_id',
-            tooltipValue: 'tooltip.employee_id',
-            displayable: context => {
-                return context.values.type === 'employee' || !context.values.type;
-            },
-            render(h, props) {
-                let value = props.currentValue;
-                // Initialize value from employeeInfo or employee_info when editing
-                if (!value || typeof value === 'object') {
-                    value = props.values.employeeInfo?.employee_id || props.values.employee_info?.employee_id || '';
-                    props.inputHandler(value);
-                }
-                return h('at-input', {
-                    props: {
-                        value: value || '',
-                        placeholder: props.field.placeholder,
-                    },
-                    on: {
-                        input(val) {
-                            props.inputHandler(val);
-                        },
-                    },
-                });
-            },
-        },
-        {
-            label: 'field.joined_date',
-            key: 'joined_date',
-            type: 'input',
-            frontendType: 'date',
-            placeholder: 'field.joined_date',
-            tooltipValue: 'tooltip.joined_date',
-            displayable: context => {
-                return context.values.type === 'employee' || !context.values.type;
-            },
-            render(h, props) {
-                let value = props.currentValue;
-                // Initialize value from employeeInfo or employee_info when editing
-                if (!value || typeof value === 'object') {
-                    value = props.values.employeeInfo?.joined_date || props.values.employee_info?.joined_date || '';
-                    props.inputHandler(value);
-                }
-                return h('at-input', {
-                    props: {
-                        value: value || '',
-                        type: 'date',
-                        placeholder: props.field.placeholder,
-                    },
-                    on: {
-                        input(val) {
-                            props.inputHandler(val);
-                        },
-                    },
-                });
-            },
-        },
-        {
-            label: 'field.web_and_app_monitoring',
-            key: 'web_and_app_monitoring',
-            type: 'checkbox',
-            default: 1,
-        },
-        {
-            label: 'field.employee_id',
-            key: 'employee_id',
-            type: 'input',
-            placeholder: 'field.employee_id',
             displayable: context => context.values.type === 'employee',
             required: context => context.values.type === 'employee',
             render: (h, props) => {
@@ -370,6 +304,12 @@ export function fieldsToFillProvider() {
                     },
                 });
             },
+        },
+                {
+            label: 'field.web_and_app_monitoring',
+            key: 'web_and_app_monitoring',
+            type: 'checkbox',
+            default: 1,
         },
     ];
 }
@@ -479,35 +419,6 @@ export default (context, router) => {
             },
         },
         {
-            // Employee ID display field - shows employee identification number
-            label: 'field.employee_id',
-            key: 'employee_id',
-            render: (h, { item }) => {
-                const employeeId = item.employeeInfo?.employee_id || item.employee_info?.employee_id;
-                return h('span', employeeId || '-');
-            },
-        },
-        {
-            // Joined Date display field - shows when employee joined the company
-            label: 'field.joined_date',
-            key: 'joined_date',
-            render: (h, { item }) => {
-                const joinedDate = item.employeeInfo?.joined_date || item.employee_info?.joined_date;
-                if (joinedDate) {
-                    const date = new Date(joinedDate);
-                    return h('span', date.toLocaleDateString());
-                }
-                return h('span', '-');
-            },
-        },
-        {
-            label: 'field.efficiency',
-            key: 'efficiency',
-            render: (h, { currentValue }) => {
-                return h('span', currentValue !== null ? currentValue : '—');
-            },
-        },
-        {
             label: 'field.employee_id',
             key: 'employee_info.employee_id',
             displayable: context => context.values.type === 'employee' && context.values.employee_info,
@@ -533,6 +444,13 @@ export default (context, router) => {
                 }
                 
                 return h('span', dateOfJoined || '—');
+            },
+        },
+        {
+            label: 'field.efficiency',
+            key: 'efficiency',
+            render: (h, { currentValue }) => {
+                return h('span', currentValue !== null ? currentValue : '—');
             },
         },
     ];
