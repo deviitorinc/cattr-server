@@ -223,6 +223,62 @@ export function fieldsToFillProvider() {
             type: 'checkbox',
             default: 1,
         },
+        {
+            label: 'field.employee_id',
+            key: 'employee_id',
+            type: 'input',
+            placeholder: 'field.employee_id',
+            displayable: context => context.values.type === 'employee',
+            required: context => context.values.type === 'employee',
+            render: (h, props) => {
+                // Handle initialization from nested employee_info
+                if (props.values.employee_info && props.values.employee_info.employee_id && !props.currentValue) {
+                    props.currentValue = props.values.employee_info.employee_id;
+                    props.inputHandler(props.currentValue);
+                }
+                
+                return h('at-input', {
+                    props: {
+                        value: props.currentValue || '',
+                        placeholder: 'field.employee_id',
+                    },
+                    on: {
+                        input(value) {
+                            props.inputHandler(value);
+                        },
+                    },
+                });
+            },
+        },
+        {
+            label: 'field.date_of_joined',
+            key: 'date_of_joined',
+            type: 'input',
+            frontendType: 'date',
+            placeholder: 'field.date_of_joined',
+            displayable: context => context.values.type === 'employee',
+            required: context => context.values.type === 'employee',
+            render: (h, props) => {
+                // Handle initialization from nested employee_info
+                if (props.values.employee_info && props.values.employee_info.date_of_joined && !props.currentValue) {
+                    props.currentValue = props.values.employee_info.date_of_joined;
+                    props.inputHandler(props.currentValue);
+                }
+                
+                return h('at-input', {
+                    props: {
+                        value: props.currentValue || '',
+                        placeholder: 'field.date_of_joined',
+                        type: 'date',
+                    },
+                    on: {
+                        input(value) {
+                            props.inputHandler(value);
+                        },
+                    },
+                });
+            },
+        },
     ];
 }
 
@@ -335,6 +391,22 @@ export default (context, router) => {
             key: 'efficiency',
             render: (h, { currentValue }) => {
                 return h('span', currentValue !== null ? currentValue : '—');
+            },
+        },
+        {
+            label: 'field.employee_id',
+            key: 'employee_info.employee_id',
+            displayable: context => context.values.type === 'employee' && context.values.employee_info,
+            render: (h, { currentValue }) => {
+                return h('span', currentValue || '—');
+            },
+        },
+        {
+            label: 'field.date_of_joined',
+            key: 'employee_info.date_of_joined',
+            displayable: context => context.values.type === 'employee' && context.values.employee_info,
+            render: (h, { currentValue }) => {
+                return h('span', currentValue || '—');
             },
         },
     ];
@@ -460,6 +532,26 @@ export default (context, router) => {
             title: 'field.email',
             key: 'email',
         },
+        // {
+        //     title: 'field.employee_id',
+        //     key: 'employee_info.employee_id',
+        //     render(h, { item }) {
+        //         if (item.type === 'employee' && item.employee_info) {
+        //             return h('span', item.employee_info.employee_id);
+        //         }
+        //         return h('span', '—');
+        //     },
+        // },
+        // {
+        //     title: 'field.date_of_joined',
+        //     key: 'employee_info.date_of_joined',
+        //     render(h, { item }) {
+        //         if (item.type === 'employee' && item.employee_info) {
+        //             return h('span', item.employee_info.date_of_joined);
+        //         }
+        //         return h('span', '—');
+        //     },
+        // },
     ]);
 
     grid.addAction([

@@ -19,6 +19,8 @@ class EditUserRequest extends CattrFormRequest
 
     public function _rules(): array
     {
+        $userId = Request::input('id');
+        
         return [
             'id' => 'required|int',
             'full_name' => 'sometimes|required|string',
@@ -26,7 +28,7 @@ class EditUserRequest extends CattrFormRequest
                 'sometimes',
                 'required',
                 'email',
-                Rule::unique('users', 'email')->ignore(Request::input('id'))
+                Rule::unique('users', 'email')->ignore($userId)
             ],
             'user_language' => 'sometimes|required',
             'password' => 'sometimes|required|min:6',
@@ -44,6 +46,12 @@ class EditUserRequest extends CattrFormRequest
             'project_roles.*.role_id' => ['required', new Enum(Role::class)],
             'type' => 'sometimes|required|string',
             'web_and_app_monitoring' => 'sometimes|required|bool',
+            'employee_id' => [
+                'required_if:type,employee',
+                'string',
+                Rule::unique('employee_info', 'employee_id')->ignore($userId, 'user_id')
+            ],
+            'date_of_joined' => 'required_if:type,employee|date',
         ];
     }
 }

@@ -13,6 +13,7 @@ use Exception;
 use Filter;
 use App\Mail\UserCreated;
 use App\Models\User;
+use App\Models\EmployeeInfo;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\JsonResponse;
@@ -158,6 +159,10 @@ class UserController extends ItemController
      */
     public function index(ListUsersRequest $request): JsonResponse
     {
+        Filter::listen(Filter::getActionFilterName(), static function ($users) {
+            return $users->load('employeeInfo');
+        });
+
         return $this->_index($request);
     }
 
@@ -264,10 +269,38 @@ class UserController extends ItemController
      */
     public function create(CreateUserRequest $request): JsonResponse
     {
+        \Log::info('UserController create method called', $request->validated());
+        
         Filter::listen(Filter::getRequestFilterName(), static function ($requestData) use ($request) {
             $requestData['screenshots_state_locked'] = $request->user()->isAdmin() && ScreenshotsState::tryFrom($requestData['screenshots_state'])->mustBeInherited();
 
             return $requestData;
+        });
+
+        CatEvent::listen(Filter::getAfterActionEventName(), static function ($user, $requestData) {
+            // Create employee info if user type is employee
+            \Log::info('UserController create afterAction event triggered', [
+                'user_type' => $user->type,
+                'request_data' => $requestData,
+                'has_employee_id' => isset($requestData['employee_id']),
+                'has_date_of_joined' => isset($requestData['date_of_joined']),
+            ]);
+            
+            if ($user->type === 'employee' && isset($requestData['employee_id'], $requestData['date_of_joined'])) {
+                \Log::info('Creating employee info', [
+                    'user_id' => $user->id,
+                    'employee_id' => $requestData['employee_id'],
+                    'date_of_joined' => $requestData['date_of_joined'],
+                ]);
+                
+                $employeeInfo = $user->employeeInfo()->create([
+                    'employee_id' => $requestData['employee_id'],
+                    'date_of_joined' => $requestData['date_of_joined'],
+                ]);
+                
+                \Log::info('Employee info created', ['employee_info_id' => $employeeInfo->id]);
+                $user->load('employeeInfo');
+            }
         });
 
         return $this->_create($request);
@@ -369,6 +402,23 @@ class UserController extends ItemController
             return $user;
         });
 
+        CatEvent::listen(Filter::getAfterActionEventName(), static function ($user, $requestData) {
+            // Handle employee info for employee type users
+            if ($user->type === 'employee' && isset($requestData['employee_id'], $requestData['date_of_joined'])) {
+                $user->employeeInfo()->updateOrCreate(
+                    ['user_id' => $user->id],
+                    [
+                        'employee_id' => $requestData['employee_id'],
+                        'date_of_joined' => $requestData['date_of_joined'],
+                    ]
+                );
+            } elseif ($user->type !== 'employee') {
+                // Delete employee info if user type is no longer employee
+                $user->employeeInfo()->delete();
+            }
+            $user->load('employeeInfo');
+        });
+
         return $this->_edit($request);
     }
 
@@ -408,6 +458,13 @@ class UserController extends ItemController
      */
     public function show(ShowUserRequest $request): JsonResponse
     {
+        Filter::listen(Filter::getActionFilterName(), static function ($user) {
+            if ($user->type === 'employee') {
+                $user->load('employeeInfo');
+            }
+            return $user;
+        });
+
         return $this->_show($request);
     }
 
