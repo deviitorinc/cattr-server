@@ -28,6 +28,7 @@ use App\Http\Requests\User\DestroyUserRequest;
 use App\Models\Setting;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class UserController extends ItemController
@@ -162,7 +163,7 @@ class UserController extends ItemController
         Filter::listen(Filter::getActionFilterName(), static function ($users) {
             return $users->load('employeeInfo');
         });
-
+      
         return $this->_index($request);
     }
 
