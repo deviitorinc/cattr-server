@@ -53,7 +53,24 @@ class EmployeeController extends Controller
      */
     public function store(CreateEmployeeRequest $request): JsonResponse
     {
-        $employee = Employee::create($request->validated());
+        $validatedData = $request->validated();
+        
+        // Check if there's a soft-deleted employee record for this user
+        $existingEmployee = Employee::withTrashed()->where('user_id', $validatedData['user_id'])->first();
+        
+        if ($existingEmployee && $existingEmployee->trashed()) {
+            // Restore and update the existing soft-deleted record
+            $existingEmployee->restore();
+            $existingEmployee->update([
+                'employee_id' => $validatedData['employee_id'],
+                'date_of_joined' => $validatedData['date_of_joined'],
+            ]);
+            $employee = $existingEmployee;
+        } else {
+            // Create a new employee record
+            $employee = Employee::create($validatedData);
+        }
+        
         $employee->load('user');
         
         $employeeData = [
@@ -133,8 +150,10 @@ class EmployeeController extends Controller
      */
     public function getAvailableUsers(): JsonResponse
     {
-        // Get users who don't already have employee records
-        $users = User::whereDoesntHave('employee')->get(['id', 'full_name', 'email']);
+        // Get users who don't have active employee records (excluding soft deleted ones)
+        $users = User::whereDoesntHave('employee', function ($query) {
+            $query->whereNull('deleted_at');
+        })->get(['id', 'full_name', 'email']);
         
         return response()->json($users);
     }
