@@ -16,7 +16,7 @@ export default class UsersService extends ResourceService {
      * @returns string
      */
     getItemRequestUri(id) {
-        return `users/show?${serialize({ id, with: ['role', 'projectsRelation.role', 'employeeInfo'] })}`;
+        return `users/show?${serialize({ id, with: ['role', 'projectsRelation.role'] })}`;
     }
 
     /**
