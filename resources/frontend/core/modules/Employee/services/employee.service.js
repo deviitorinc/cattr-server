@@ -27,4 +27,8 @@ export default class EmployeeService extends ResourceService {
     getWithFilters(filters, config = {}) {
         return axios.get('v1/employees', { ...config, params: filters });
     }
+
+    getAvailableUsers() {
+        return axios.get('v1/employees/available-users');
+    }
 }

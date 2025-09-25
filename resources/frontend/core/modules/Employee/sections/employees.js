@@ -4,6 +4,7 @@ import EmployeeService from '../services/employee.service';
 import Employees from '../views/Employees';
 import { hasRole } from '@/utils/user';
 import UserSelect from '../components/UserSelect.vue';
+import AvailableUserSelect from '../components/AvailableUserSelect.vue';
 import DateInput from '../components/DateInput.vue';
 
 export default (context, router) => {
@@ -36,21 +37,14 @@ export default (context, router) => {
             label: 'field.user',
             key: 'user_id',
             render: (h, props) => {
-                const value = Array.isArray(props.currentValue)
-                    ? props.currentValue
-                    : typeof props.currentValue === 'number'
-                      ? [props.currentValue]
-                      : [];
+                const value = typeof props.currentValue === 'number' ? props.currentValue : null;
 
-                return h(UserSelect, {
+                return h(AvailableUserSelect, {
                     props: {
                         value,
-                        localStorageKey: 'user-select.employee',
                     },
                     on: {
-                        change: function (selectedUsers) {
-                            // For employee, we only need one user, so take the first one
-                            const userId = selectedUsers.length > 0 ? selectedUsers[0] : null;
+                        change: function (userId) {
                             props.inputHandler(userId);
                         },
                     },
