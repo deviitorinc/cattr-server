@@ -3,7 +3,7 @@
 namespace Modules\Employee\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Modules\Employee\Entities\EmployeeInfo;
+use Modules\Employee\Entities\Employee;
 use Modules\Employee\Http\Requests\CreateEmployeeRequest;
 use Modules\Employee\Http\Requests\UpdateEmployeeRequest;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +16,7 @@ class EmployeeController extends Controller
      */
     public function index(): JsonResponse
     {
-        $employees = EmployeeInfo::with('user')->get();
+        $employees = Employee::with('user')->get();
         return response()->json($employees);
     }
 
@@ -25,7 +25,7 @@ class EmployeeController extends Controller
      */
     public function store(CreateEmployeeRequest $request): JsonResponse
     {
-        $employee = EmployeeInfo::create($request->validated());
+        $employee = Employee::create($request->validated());
         $employee->load('user');
         
         return response()->json($employee, 201);
@@ -34,7 +34,7 @@ class EmployeeController extends Controller
     /**
      * Show the specified resource.
      */
-    public function show(EmployeeInfo $employee): JsonResponse
+    public function show(Employee $employee): JsonResponse
     {
         $employee->load('user');
         return response()->json($employee);
@@ -43,7 +43,7 @@ class EmployeeController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateEmployeeRequest $request, EmployeeInfo $employee): JsonResponse
+    public function update(UpdateEmployeeRequest $request, Employee $employee): JsonResponse
     {
         $employee->update($request->validated());
         $employee->load('user');
@@ -54,7 +54,7 @@ class EmployeeController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(EmployeeInfo $employee): JsonResponse
+    public function destroy(Employee $employee): JsonResponse
     {
         $employee->delete();
         return response()->json(['message' => 'Employee deleted successfully']);

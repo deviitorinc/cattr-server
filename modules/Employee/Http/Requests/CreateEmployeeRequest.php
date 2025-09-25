@@ -21,7 +21,7 @@ class CreateEmployeeRequest extends FormRequest
     {
         return [
             'user_id' => 'required|exists:users,id',
-            'employee_id' => 'required|string|unique:employee_info,employee_id',
+            'employee_id' => 'required|string|unique:employees,employee_id',
             'date_of_joined' => 'required|date',
         ];
     }

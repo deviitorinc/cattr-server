@@ -27,7 +27,7 @@ class UpdateEmployeeRequest extends FormRequest
             'employee_id' => [
                 'sometimes',
                 'string',
-                Rule::unique('employee_info', 'employee_id')->ignore($employeeId),
+                Rule::unique('employees', 'employee_id')->ignore($employeeId),
             ],
             'date_of_joined' => 'sometimes|date',
         ];
