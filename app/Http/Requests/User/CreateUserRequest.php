@@ -32,8 +32,6 @@ class CreateUserRequest extends CattrFormRequest
             'role_id' => ['required', new Enum(Role::class)],
             'type' => 'required|string',
             'web_and_app_monitoring' => 'sometimes|required|bool',
-            'employee_id' => 'required_if:type,employee|string|unique:employee_info,employee_id',
-            'date_of_joined' => 'required_if:type,employee|date',
         ];
     }
 }

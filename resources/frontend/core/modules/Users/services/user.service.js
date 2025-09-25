@@ -1,20 +1,33 @@
 import ResourceService from '@/services/resource.service';
 import axios from 'axios';
+import { serialize } from '@/utils/url';
 
-export default class UserService extends ResourceService {
+export default class UsersService extends ResourceService {
     /**
-     * Get all users.
-     *
      * @param config
      * @returns {Promise<AxiosResponse<T>>}
      */
-    getAll(config = {}) {
-        return axios.get('users/list', config);
+    async getAll(config = {}) {
+        return (await axios.get('users/list', config)).data.data;
     }
 
     /**
-     * Save user.
-     *
+     * @param id
+     * @returns string
+     */
+    getItemRequestUri(id) {
+        return `users/show?${serialize({ id, with: ['role', 'projectsRelation.role'] })}`;
+    }
+
+    /**
+     * @param id
+     * @returns {Promise<AxiosResponse<T>>}
+     */
+    getItem(id) {
+        return axios.get(this.getItemRequestUri(id));
+    }
+
+    /**
      * @param data
      * @param isNew
      * @returns {Promise<AxiosResponse<T>>}
@@ -24,8 +37,6 @@ export default class UserService extends ResourceService {
     }
 
     /**
-     * Remove user.
-     *
      * @param id
      * @returns {Promise<AxiosResponse<T>>}
      */
@@ -34,9 +45,7 @@ export default class UserService extends ResourceService {
     }
 
     /**
-     * Get option label key.
-     *
-     * @returns {string}
+     * @returns string
      */
     getOptionLabelKey() {
         return 'full_name';
@@ -50,15 +59,5 @@ export default class UserService extends ResourceService {
      */
     getWithFilters(filters, config = {}) {
         return axios.post('users/list', filters, config);
-    }
-
-    /**
-     * Send at invitation to the user.
-     *
-     * @param id
-     * @returns {Promise<AxiosResponse<T>>}
-     */
-    sendInvite(id) {
-        return axios.post('users/send-invite', { id });
     }
 }
