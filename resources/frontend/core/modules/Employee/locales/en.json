@@ -12,6 +12,7 @@
     "email": "Email",
     "employee_id": "Employee ID",
     "date_of_joined": "Date of Joined",
-    "user": "User"
+    "user": "User",
+    "select_user": "Select User"
   }
 }

@@ -3,6 +3,7 @@ import { store } from '@/store';
 import EmployeeService from '../services/employee.service';
 import Employees from '../views/Employees';
 import { hasRole } from '@/utils/user';
+import UserSelect from '../components/UserSelect.vue';
 
 export default (context, router) => {
     const employeesContext = cloneDeep(context);
@@ -32,10 +33,28 @@ export default (context, router) => {
         {
             label: 'field.user',
             key: 'user_id',
-            type: 'select',
+            render: (h, props) => {
+                const value = Array.isArray(props.currentValue)
+                    ? props.currentValue
+                    : typeof props.currentValue === 'number'
+                      ? [props.currentValue]
+                      : [];
+
+                return h(UserSelect, {
+                    props: {
+                        value,
+                        localStorageKey: 'user-select.employee',
+                    },
+                    on: {
+                        change: function (selectedUsers) {
+                            // For employee, we only need one user, so take the first one
+                            const userId = selectedUsers.length > 0 ? selectedUsers[0] : null;
+                            props.inputHandler(userId);
+                        },
+                    },
+                });
+            },
             required: true,
-            placeholder: 'field.user',
-            // Note: You may need to load available users for this select
         },
         {
             label: 'field.employee_id',
