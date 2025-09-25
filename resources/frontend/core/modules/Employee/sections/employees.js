@@ -4,6 +4,7 @@ import EmployeeService from '../services/employee.service';
 import Employees from '../views/Employees';
 import { hasRole } from '@/utils/user';
 import UserSelect from '../components/UserSelect.vue';
+import DateInput from '../components/DateInput.vue';
 
 export default (context, router) => {
     const employeesContext = cloneDeep(context);
@@ -66,9 +67,17 @@ export default (context, router) => {
         {
             label: 'field.date_of_joined',
             key: 'date_of_joined',
-            type: 'date',
             required: true,
-            placeholder: 'field.date_of_joined',
+            render: (h, props) => {
+                const value = typeof props.currentValue === 'string' ? props.currentValue : null;
+
+                return h(DateInput, {
+                    props: {
+                        inputHandler: props.inputHandler,
+                        value,
+                    },
+                });
+            },
         },
     ];
 
