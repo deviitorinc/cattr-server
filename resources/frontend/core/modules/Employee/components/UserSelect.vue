@@ -4,7 +4,7 @@
             class="user-select-input"
             :readonly="true"
             :value="inputValue"
-            :placeholder="$t('field.select_user')"
+            :placeholder="$t('control.select_user')"
             :size="size"
         />
 

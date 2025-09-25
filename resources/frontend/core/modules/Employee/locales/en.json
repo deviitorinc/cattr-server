@@ -1,18 +1,22 @@
 {
-  "navigation": {
-    "employees": "Employees"
-  },
-  "employees": {
-    "grid-title": "Employees",
-    "crud-title": "Employee"
-  },
-  "field": {
-    "name": "Name",
-    "full_name": "Name",
-    "email": "Email",
-    "employee_id": "Employee ID",
-    "date_of_joined": "Date of Joined",
-    "user": "User",
-    "select_user": "Select User"
-  }
+    "navigation": {
+        "employees": "Employees"
+    },
+    "employees": {
+        "grid-title": "Employees",
+        "crud-title": "Employee"
+    },
+    "field": {
+        "name": "Name",
+        "full_name": "Name",
+        "email": "Email",
+        "employee_id": "Employee ID",
+        "date_of_joined": "Date of Joined",
+        "user": "User"
+    },
+    "control": {
+        "select_user": "Select User",
+        "clear": "Clear",
+        "ok": "OK"
+    }
 }
