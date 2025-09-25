@@ -65,11 +65,17 @@
                 return this.value ? moment(this.value).format(DATETIME_FORMAT) : this.$t('field.date_of_joined');
             },
         },
+        watch: {
+            value(newValue, oldValue) {
+                // When the value prop changes, ensure the parent is notified
+                if (newValue !== oldValue && newValue !== null) {
+                    this.$emit('change', newValue);
+                }
+            },
+        },
         mounted() {
             window.addEventListener('click', this.hidePopup);
 
-            this.inputHandler(this.value);
-            this.$emit('change', this.value);
             this.$nextTick(async () => {
                 try {
                     const locale = await import(`vue2-datepicker/locale/${this.$i18n.locale}`);
@@ -89,6 +95,9 @@
                     };
                 }
             });
+        },
+        beforeDestroy() {
+            window.removeEventListener('click', this.hidePopup);
         },
         methods: {
             togglePopup() {

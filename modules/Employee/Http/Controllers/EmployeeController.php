@@ -17,25 +17,26 @@ class EmployeeController extends Controller
      */
     public function index(): JsonResponse
     {
-        $employees = Employee::with('user')
-            ->paginate(15)
-            ->through(function ($employee) {
-                return [
-                    'id' => $employee->id,
-                    'name' => $employee->user->full_name,
-                    'email' => $employee->user->email,
-                    'employee_id' => $employee->employee_id,
-                    'date_of_joined' => $employee->date_of_joined->format('Y-m-d'),
-                    'user_id' => $employee->user_id,
-                    'created_at' => $employee->created_at,
-                    'updated_at' => $employee->updated_at,
-                ];
-            });
+        $employees = Employee::with('user')->paginate(15);
+        
+        $transformedData = [];
+        foreach ($employees->items() as $employee) {
+            $transformedData[] = [
+                'id' => $employee->id,
+                'name' => $employee->user->full_name,
+                'email' => $employee->user->email,
+                'employee_id' => $employee->employee_id,
+                'date_of_joined' => $employee->date_of_joined->format('Y-m-d'),
+                'user_id' => $employee->user_id,
+                'created_at' => $employee->created_at,
+                'updated_at' => $employee->updated_at,
+            ];
+        }
 
         return response()->json([
             'status' => 200,
             'success' => true,
-            'data' => $employees->items(),
+            'data' => $transformedData,
             'pagination' => [
                 'total' => $employees->total(),
                 'perPage' => $employees->perPage(),
@@ -55,7 +56,20 @@ class EmployeeController extends Controller
         $employee = Employee::create($request->validated());
         $employee->load('user');
         
-        return response()->json($employee, 201);
+        $employeeData = [
+            'id' => $employee->id,
+            'name' => $employee->user->full_name,
+            'email' => $employee->user->email,
+            'employee_id' => $employee->employee_id,
+            'date_of_joined' => $employee->date_of_joined->format('Y-m-d'),
+            'user_id' => $employee->user_id,
+            'created_at' => $employee->created_at,
+            'updated_at' => $employee->updated_at,
+        ];
+        
+        return response()->json([
+            'data' => $employeeData
+        ], 201);
     }
 
     /**
@@ -76,7 +90,9 @@ class EmployeeController extends Controller
             'updated_at' => $employee->updated_at,
         ];
         
-        return response()->json($employeeData);
+        return response()->json([
+            'data' => $employeeData
+        ]);
     }
 
     /**
@@ -87,7 +103,20 @@ class EmployeeController extends Controller
         $employee->update($request->validated());
         $employee->load('user');
         
-        return response()->json($employee);
+        $employeeData = [
+            'id' => $employee->id,
+            'name' => $employee->user->full_name,
+            'email' => $employee->user->email,
+            'employee_id' => $employee->employee_id,
+            'date_of_joined' => $employee->date_of_joined->format('Y-m-d'),
+            'user_id' => $employee->user_id,
+            'created_at' => $employee->created_at,
+            'updated_at' => $employee->updated_at,
+        ];
+        
+        return response()->json([
+            'data' => $employeeData
+        ]);
     }
 
     /**

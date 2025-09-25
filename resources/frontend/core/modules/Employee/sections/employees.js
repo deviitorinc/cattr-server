@@ -26,7 +26,8 @@ export default (context, router) => {
     grid.addToMetaProperties('navigation', navigation, grid.getRouterConfig());
     grid.addToMetaProperties('permissions', () => hasRole(store.getters['user/user'], 'admin'), grid.getRouterConfig());
 
-    const fieldsToFill = [
+    // Fields for new employee (user is editable)
+    const fieldsForNew = [
         {
             key: 'id',
             displayable: false,
@@ -69,7 +70,7 @@ export default (context, router) => {
             key: 'date_of_joined',
             required: true,
             render: (h, props) => {
-                const value = typeof props.currentValue === 'string' ? props.currentValue : null;
+                const value = props.currentValue && typeof props.currentValue === 'string' ? props.currentValue : null;
 
                 return h(DateInput, {
                     props: {
@@ -81,8 +82,48 @@ export default (context, router) => {
         },
     ];
 
-    crud.edit.addField(fieldsToFill);
-    crud.new.addField(fieldsToFill);
+    // Fields for edit employee (user is read-only)
+    const fieldsForEdit = [
+        {
+            key: 'id',
+            displayable: false,
+        },
+        {
+            label: 'field.user',
+            key: 'name', // Display the user name instead of user_id
+            render: (h, props) => {
+                const name = props.values.name || '';
+                const email = props.values.email || '';
+                const displayText = email ? `${name} (${email})` : name;
+                return h('span', displayText);
+            },
+        },
+        {
+            label: 'field.employee_id',
+            key: 'employee_id',
+            type: 'input',
+            required: true,
+            placeholder: 'field.employee_id',
+        },
+        {
+            label: 'field.date_of_joined',
+            key: 'date_of_joined',
+            required: true,
+            render: (h, props) => {
+                const value = props.currentValue && typeof props.currentValue === 'string' ? props.currentValue : null;
+
+                return h(DateInput, {
+                    props: {
+                        inputHandler: props.inputHandler,
+                        value,
+                    },
+                });
+            },
+        },
+    ];
+
+    crud.edit.addField(fieldsForEdit);
+    crud.new.addField(fieldsForNew);
 
     grid.addColumn([
         {
