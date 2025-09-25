@@ -18,8 +18,8 @@ class EmployeeController extends Controller
     public function index(): JsonResponse
     {
         $employees = Employee::with('user')
-            ->get()
-            ->map(function ($employee) {
+            ->paginate(15)
+            ->through(function ($employee) {
                 return [
                     'id' => $employee->id,
                     'name' => $employee->user->full_name,
@@ -32,7 +32,19 @@ class EmployeeController extends Controller
                 ];
             });
 
-        return response()->json(['data' => $employees]);
+        return response()->json([
+            'status' => 200,
+            'success' => true,
+            'data' => $employees->items(),
+            'pagination' => [
+                'total' => $employees->total(),
+                'perPage' => $employees->perPage(),
+                'currentPage' => $employees->currentPage(),
+                'lastPage' => $employees->lastPage(),
+                'from' => $employees->firstItem(),
+                'to' => $employees->lastItem(),
+            ]
+        ]);
     }
 
     /**
