@@ -1,0 +1,12 @@
+{
+  "navigation": {
+    "employees": "Employees"
+  },
+  "employees": {
+    "grid-title": "Employees",
+    "crud-title": "Employee"
+  },
+  "field": {
+    "color": "Color"
+  }
+}

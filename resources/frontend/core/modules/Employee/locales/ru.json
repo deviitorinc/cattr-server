@@ -1,0 +1,12 @@
+{
+    "navigation": {
+      "employees": "Приоритеты"
+    },
+    "employees": {
+      "grid-title": "Приоритеты",
+      "crud-title": "Приоритет"
+    },
+    "field": {
+      "color": "Цвет"
+    }
+}
