@@ -1,4 +1,5 @@
 {
     "CattrGitlabIntegration": true,
-    "RedmineIntegration": true
+    "RedmineIntegration": true,
+    "Employee": true
 }
