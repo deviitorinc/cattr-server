@@ -13,8 +13,14 @@ return new class extends Migration
     {
         Schema::create('employees', function (Blueprint $table) {
             $table->id();
-            
+            $table->unsignedInteger('user_id');
+            $table->string('employee_id')->unique();
+            $table->date('date_of_joined');
             $table->timestamps();
+            $table->softDeletes();
+
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
+            $table->unique('user_id');
         });
     }
 
