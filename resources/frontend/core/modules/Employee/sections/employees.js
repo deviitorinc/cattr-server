@@ -58,7 +58,7 @@ export default (context, router) => {
 
     grid.addColumn([
         {
-            title: 'field.name',
+            title: 'field.full_name',
             key: 'name',
         },
         {
