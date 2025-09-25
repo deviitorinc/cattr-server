@@ -6,11 +6,13 @@ import InvitationPolicy from './invitation.policy';
 import PriorityPolicy from './priority.policy';
 import StatusPolicy from './status.policy';
 import ProjectGroupPolicy from './project-group.policy';
+import EmployeePolicy from '../modules/Employee/policies/employee.policy';
 
 store.dispatch('policies/registerPolicies', {
     task: TaskPolicy,
     project: ProjectPolicy,
     user: UserPolicy,
+    employee: EmployeePolicy,
     invitation: InvitationPolicy,
     priority: PriorityPolicy,
     status: StatusPolicy,
