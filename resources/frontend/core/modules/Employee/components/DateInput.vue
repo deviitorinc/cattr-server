@@ -1,7 +1,7 @@
 <template>
     <div ref="dateinput" class="dateinput" @click="togglePopup">
         <div class="at-input">
-            <at-input class="input" :readonly="true" :value="inputValue" />
+            <at-input class="input" :placeholder="$t('field.date_of_joined')" :readonly="true" :value="inputValue" />
 
             <transition name="slide-up">
                 <div
@@ -62,7 +62,7 @@
                 return this.value !== null ? moment(this.value).toDate() : null;
             },
             inputValue() {
-                return this.value ? moment(this.value).format(DATETIME_FORMAT) : this.$t('field.date_of_joined');
+                return this.value ? moment(this.value).format(DATETIME_FORMAT) : '';
             },
         },
         watch: {
