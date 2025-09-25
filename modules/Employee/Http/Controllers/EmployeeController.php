@@ -3,6 +3,7 @@
 namespace Modules\Employee\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Modules\Employee\Entities\Employee;
 use Modules\Employee\Http\Requests\CreateEmployeeRequest;
 use Modules\Employee\Http\Requests\UpdateEmployeeRequest;
@@ -16,8 +17,22 @@ class EmployeeController extends Controller
      */
     public function index(): JsonResponse
     {
-        $employees = Employee::with('user')->get();
-        return response()->json($employees);
+        $employees = Employee::with('user')
+            ->get()
+            ->map(function ($employee) {
+                return [
+                    'id' => $employee->id,
+                    'name' => $employee->user->full_name,
+                    'email' => $employee->user->email,
+                    'employee_id' => $employee->employee_id,
+                    'date_of_joined' => $employee->date_of_joined->format('Y-m-d'),
+                    'user_id' => $employee->user_id,
+                    'created_at' => $employee->created_at,
+                    'updated_at' => $employee->updated_at,
+                ];
+            });
+
+        return response()->json(['data' => $employees]);
     }
 
     /**
@@ -37,7 +52,19 @@ class EmployeeController extends Controller
     public function show(Employee $employee): JsonResponse
     {
         $employee->load('user');
-        return response()->json($employee);
+        
+        $employeeData = [
+            'id' => $employee->id,
+            'name' => $employee->user->full_name,
+            'email' => $employee->user->email,
+            'employee_id' => $employee->employee_id,
+            'date_of_joined' => $employee->date_of_joined->format('Y-m-d'),
+            'user_id' => $employee->user_id,
+            'created_at' => $employee->created_at,
+            'updated_at' => $employee->updated_at,
+        ];
+        
+        return response()->json($employeeData);
     }
 
     /**
@@ -58,5 +85,16 @@ class EmployeeController extends Controller
     {
         $employee->delete();
         return response()->json(['message' => 'Employee deleted successfully']);
+    }
+
+    /**
+     * Get available users for employee creation
+     */
+    public function getAvailableUsers(): JsonResponse
+    {
+        // Get users who don't already have employee records
+        $users = User::whereDoesntHave('employee')->get(['id', 'full_name', 'email']);
+        
+        return response()->json($users);
     }
 }

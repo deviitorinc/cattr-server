@@ -2,7 +2,6 @@ import cloneDeep from 'lodash/cloneDeep';
 import { store } from '@/store';
 import EmployeeService from '../services/employee.service';
 import Employees from '../views/Employees';
-import ColorInput from '@/components/ColorInput';
 import { hasRole } from '@/utils/user';
 
 export default (context, router) => {
@@ -31,28 +30,26 @@ export default (context, router) => {
             displayable: false,
         },
         {
-            label: 'field.name',
-            key: 'name',
-            type: 'input',
+            label: 'field.user',
+            key: 'user_id',
+            type: 'select',
             required: true,
-            placeholder: 'field.name',
+            placeholder: 'field.user',
+            // Note: You may need to load available users for this select
         },
         {
-            label: 'field.color',
-            key: 'color',
-            required: false,
-            render: (h, data) => {
-                return h(ColorInput, {
-                    props: {
-                        value: typeof data.currentValue === 'string' ? data.currentValue : 'transparent',
-                    },
-                    on: {
-                        change(value) {
-                            data.inputHandler(value);
-                        },
-                    },
-                });
-            },
+            label: 'field.employee_id',
+            key: 'employee_id',
+            type: 'input',
+            required: true,
+            placeholder: 'field.employee_id',
+        },
+        {
+            label: 'field.date_of_joined',
+            key: 'date_of_joined',
+            type: 'date',
+            required: true,
+            placeholder: 'field.date_of_joined',
         },
     ];
 
@@ -65,32 +62,21 @@ export default (context, router) => {
             key: 'name',
         },
         {
-            title: 'field.color',
-            key: 'color',
-            render(h, { item }) {
-                return h(
-                    'span',
-                    {
-                        style: {
-                            display: 'flex',
-                            alignItems: 'center',
-                        },
-                    },
-                    [
-                        h('span', {
-                            style: {
-                                display: 'inline-block',
-                                background: item.color,
-                                borderRadius: '4px',
-                                width: '16px',
-                                height: '16px',
-                                margin: '0 4px 0 0',
-                            },
-                        }),
-                        h('span', {}, [item.color]),
-                    ],
-                );
-            },
+            title: 'field.email',
+            key: 'email',
+        },
+        {
+            title: 'field.employee_id',
+            key: 'employee_id',
+        },
+        {
+            title: 'field.date_of_joined',
+            key: 'date_of_joined',
+            // render(h, { item }) {
+            //     return h('span', {}, [
+            //         new Date(item.date_of_joined).toLocaleDateString()
+            //     ]);
+            // },
         },
     ]);
 

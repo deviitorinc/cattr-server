@@ -1,12 +1,16 @@
 {
     "navigation": {
-      "employees": "Приоритеты"
+      "employees": "Сотрудники"
     },
     "employees": {
-      "grid-title": "Приоритеты",
-      "crud-title": "Приоритет"
+      "grid-title": "Сотрудники",
+      "crud-title": "Сотрудник"
     },
     "field": {
-      "color": "Цвет"
+      "name": "Имя",
+      "email": "Email",
+      "employee_id": "ID сотрудника",
+      "date_of_joined": "Дата приема на работу",
+      "user": "Пользователь"
     }
 }

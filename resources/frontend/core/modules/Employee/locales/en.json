@@ -7,6 +7,11 @@
     "crud-title": "Employee"
   },
   "field": {
-    "color": "Color"
+    "name": "Name",
+    "full_name": "Name",
+    "email": "Email",
+    "employee_id": "Employee ID",
+    "date_of_joined": "Date of Joined",
+    "user": "User"
   }
 }
