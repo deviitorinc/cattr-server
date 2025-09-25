@@ -3,65 +3,60 @@
 namespace Modules\Employee\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\RedirectResponse;
+use Modules\Employee\Entities\EmployeeInfo;
+use Modules\Employee\Http\Requests\CreateEmployeeRequest;
+use Modules\Employee\Http\Requests\UpdateEmployeeRequest;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
 
 class EmployeeController extends Controller
 {
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(): JsonResponse
     {
-        return view('employee::index');
-    }
-
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('employee::create');
+        $employees = EmployeeInfo::with('user')->get();
+        return response()->json($employees);
     }
 
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request): RedirectResponse
+    public function store(CreateEmployeeRequest $request): JsonResponse
     {
-        //
+        $employee = EmployeeInfo::create($request->validated());
+        $employee->load('user');
+        
+        return response()->json($employee, 201);
     }
 
     /**
      * Show the specified resource.
      */
-    public function show($id)
+    public function show(EmployeeInfo $employee): JsonResponse
     {
-        return view('employee::show');
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit($id)
-    {
-        return view('employee::edit');
+        $employee->load('user');
+        return response()->json($employee);
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, $id): RedirectResponse
+    public function update(UpdateEmployeeRequest $request, EmployeeInfo $employee): JsonResponse
     {
-        //
+        $employee->update($request->validated());
+        $employee->load('user');
+        
+        return response()->json($employee);
     }
 
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id)
+    public function destroy(EmployeeInfo $employee): JsonResponse
     {
-        //
+        $employee->delete();
+        return response()->json(['message' => 'Employee deleted successfully']);
     }
 }

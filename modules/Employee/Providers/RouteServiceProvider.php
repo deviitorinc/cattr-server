@@ -4,6 +4,7 @@ namespace Modules\Employee\Providers;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvider;
+use Modules\Employee\Entities\Employee;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -20,6 +21,9 @@ class RouteServiceProvider extends ServiceProvider
     public function boot(): void
     {
         parent::boot();
+        
+        // Register model binding for employee routes
+        Route::model('employee', Employee::class);
     }
 
     /**
