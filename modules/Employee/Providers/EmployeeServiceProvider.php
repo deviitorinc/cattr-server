@@ -93,6 +93,15 @@ class EmployeeServiceProvider extends ServiceProvider
     }
 
     /**
+     * Register events for the module.
+     */
+    public static function registerEvents(): void
+    {
+        // Register module-specific events here if needed
+        // For now, this is empty but required by RegisterModulesEvents middleware
+    }
+
+    /**
      * Get the services provided by the provider.
      */
     public function provides(): array

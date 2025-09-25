@@ -91,7 +91,15 @@ class RegisterModulesEvents
         CatEvent::subscribe(AttachmentObserver::class);
 
         collect(Module::allEnabled())->each(static function (\Nwidart\Modules\Module $module) {
-            App::call([preg_grep("/ModuleServiceProvider$/i", $module->get('providers'))[0], 'registerEvents']);
+            $providers = $module->get('providers');
+            $moduleServiceProviders = preg_grep("/ServiceProvider$/i", $providers);
+            
+            if (!empty($moduleServiceProviders)) {
+                $provider = reset($moduleServiceProviders); // Get first matching provider
+                if (method_exists($provider, 'registerEvents')) {
+                    App::call([$provider, 'registerEvents']);
+                }
+            }
         });
 
         return $next($request);
