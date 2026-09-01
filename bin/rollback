@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=../lib/common.sh
+source "$SCRIPT_DIR/../lib/common.sh"
+
+usage() {
+    cat <<'EOF'
+Usage: bin/rollback --config /absolute/path/to/module-deployer.conf [--yes]
+
+Restores the image and managed Compose override saved by the latest deployment.
+Database migrations are not reversed.
+EOF
+}
+
+if ! parse_config_argument "$@"; then
+    usage
+    exit 0
+fi
+load_host_config
+load_modules
+load_state
+
+for command in docker curl grep stat flock; do
+    require_command "$command"
+done
+
+exec 9>"$STATE_DIR/deploy.lock"
+flock -n 9 || die 'Another module deployment operation is already running'
+
+docker image inspect "$ROLLBACK_IMAGE" >/dev/null 2>&1 ||
+    die "Rollback image is unavailable: $ROLLBACK_IMAGE"
+[[ $(docker image inspect "$ROLLBACK_IMAGE" --format '{{.Id}}') == "$PREVIOUS_IMAGE_ID" ]] ||
+    die 'Rollback tag no longer points to the recorded previous image'
+
+if [[ $ASSUME_YES != true ]]; then
+    printf 'Restore %s and recreate only %s? Type yes: ' "$ROLLBACK_IMAGE" "$APP_SERVICE"
+    read -r answer
+    [[ $answer == yes ]] || die 'Rollback cancelled'
+fi
+
+if [[ $PREVIOUS_OVERRIDE_PRESENT == true ]]; then
+    previous_override=$BACKUP_DIR/docker-compose.modules.yml.before
+    [[ -f $previous_override ]] || die 'Previous Compose override backup is missing'
+    cp -p "$previous_override" "$OVERRIDE_FILE"
+else
+    write_override "$ROLLBACK_IMAGE" active
+fi
+
+compose_with_override config --quiet
+compose_with_override up -d --no-deps --force-recreate "$APP_SERVICE"
+wait_for_health || die 'Rollback completed but the health endpoint did not recover'
+
+docker inspect "$APP_CONTAINER" --format \
+    'status={{.State.Status}} image={{.Config.Image}} image_id={{.Image}} restart_count={{.RestartCount}}'
+log 'Application image rollback passed the HTTP health check'
+log 'Database migrations were intentionally left unchanged'

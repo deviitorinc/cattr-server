@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=../lib/common.sh
+source "$SCRIPT_DIR/../lib/common.sh"
+
+usage() {
+    cat <<'EOF'
+Usage: bin/activate --config /absolute/path/to/module-deployer.conf [--yes]
+
+Restores enable values from protected module environment files after a paused,
+successful disabled-stage deployment. It does not rebuild the image.
+EOF
+}
+
+if ! parse_config_argument "$@"; then
+    usage
+    exit 0
+fi
+load_host_config
+load_modules
+load_state
+
+for command in docker curl grep stat flock; do
+    require_command "$command"
+done
+
+exec 9>"$STATE_DIR/deploy.lock"
+flock -n 9 || die 'Another module deployment operation is already running'
+
+candidate_id=$(docker image inspect "$CANDIDATE_IMAGE" --format '{{.Id}}')
+running_id=$(docker inspect "$APP_CONTAINER" --format '{{.Image}}')
+[[ $running_id == "$candidate_id" ]] ||
+    die 'The running app is not the candidate recorded by the latest deployment'
+
+verify_running_app '' disabled
+
+if [[ $ASSUME_YES != true ]]; then
+    printf 'Restore module enable values and recreate only %s? Type yes: ' "$APP_SERVICE"
+    read -r answer
+    [[ $answer == yes ]] || die 'Activation cancelled'
+fi
+
+activation_failed=true
+restore_disabled_on_exit() {
+    local exit_code=$?
+    trap - EXIT
+    set +e
+    if ((exit_code != 0)) && [[ $activation_failed == true ]]; then
+        log 'Activation check failed; returning the candidate to disabled mode'
+        write_override "$CANDIDATE_IMAGE" disabled
+        compose_with_override up -d --no-deps --force-recreate "$APP_SERVICE"
+        wait_for_health
+    fi
+    exit "$exit_code"
+}
+trap restore_disabled_on_exit EXIT
+
+write_override "$CANDIDATE_IMAGE" active
+compose_with_override up -d --no-deps --force-recreate "$APP_SERVICE"
+verify_running_app "$BACKUP_DIR/active-stage" present
+activation_failed=false
+
+{
+    printf 'status=active-stage-passed\n'
+    printf 'activated_at=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf 'functional_test=not-run\n'
+} >>"$BACKUP_DIR/deployment-report.txt"
+
+log 'Module enable values were restored and automated checks passed'
+log 'A real desktop clock-in and external delivery test was not run'

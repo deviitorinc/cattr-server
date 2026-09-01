@@ -1,0 +1,30 @@
+name: Validate module deployer
+
+on:
+  push:
+    branches:
+      - tools/module-deployer
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: sudo apt-get update && sudo apt-get install --yes shellcheck
+
+      - name: Check shell scripts
+        run: |
+          bash -n bin/deploy bin/activate bin/rollback bin/verify lib/common.sh tests/validate-module-locks
+          shellcheck bin/deploy bin/activate bin/rollback bin/verify lib/common.sh tests/validate-module-locks
+
+      - name: Check PHP assertion helper
+        run: php -l docker/assert-classes.php
+
+      - name: Verify locked module refs
+        run: ./tests/validate-module-locks

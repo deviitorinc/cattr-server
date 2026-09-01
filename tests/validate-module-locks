@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+TOOL_ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+
+die() {
+    printf 'ERROR: %s\n' "$*" >&2
+    exit 1
+}
+
+shopt -s nullglob
+module_files=("$TOOL_ROOT"/modules/*.conf)
+shopt -u nullglob
+((${#module_files[@]} > 0)) || die 'No module definitions found'
+
+for file in "${module_files[@]}"; do
+    unset MODULE_KEY MODULE_SOURCE_KIND MODULE_SOURCE_URL MODULE_SOURCE_REF
+    unset MODULE_SOURCE_COMMIT MODULE_SOURCE_SHA256 MODULE_INSTALL_DIR
+    unset MODULE_PROVIDER_CLASS MODULE_CATTR_NAME MODULE_ENV_FILE
+    unset MODULE_ENABLE_VARIABLE MODULE_REQUIRED_TABLES MODULE_INCLUDE_PATHS
+
+    CATTR_CONFIG_DIR=/tmp/cattr-module-deployer-test
+    # shellcheck disable=SC1090
+    source "$file"
+
+    [[ -n ${MODULE_KEY:-} ]] || die "$file: MODULE_KEY is missing"
+    [[ -n ${MODULE_INSTALL_DIR:-} ]] || die "$file: MODULE_INSTALL_DIR is missing"
+    [[ -n ${MODULE_PROVIDER_CLASS:-} ]] || die "$file: MODULE_PROVIDER_CLASS is missing"
+    for table in ${MODULE_REQUIRED_TABLES:-}; do
+        [[ $table =~ ^[A-Za-z][A-Za-z0-9_]+$ ]] ||
+            die "$file: invalid required table: $table"
+    done
+
+    case ${MODULE_SOURCE_KIND:-} in
+        git)
+            [[ ${MODULE_SOURCE_COMMIT:-} =~ ^[0-9a-f]{40}$ ]] ||
+                die "$file: invalid commit lock"
+            remote_sha=$(git ls-remote --heads "$MODULE_SOURCE_URL" \
+                "$MODULE_SOURCE_REF" | awk 'NR == 1 {print $1}')
+            [[ $remote_sha == "$MODULE_SOURCE_COMMIT" ]] ||
+                die "$file: branch SHA differs from the lock"
+            ;;
+        release)
+            [[ ${MODULE_SOURCE_SHA256:-} =~ ^[0-9a-f]{64}$ ]] ||
+                die "$file: invalid release checksum"
+            ;;
+        *)
+            die "$file: unsupported source kind"
+            ;;
+    esac
+
+    printf 'Module lock OK: %s\n' "$MODULE_KEY"
+done

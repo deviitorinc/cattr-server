@@ -1,0 +1,26 @@
+# Copy this file outside Git and edit it on the production server.
+
+COMPOSE_DIR=/root/apps/com.deviitor.cattr
+COMPOSE_FILE=/root/apps/com.deviitor.cattr/docker-compose.yml
+OVERRIDE_FILE=/root/apps/com.deviitor.cattr/docker-compose.modules.yml
+STATE_DIR=/root/apps/com.deviitor.cattr/.module-deployer
+BACKUP_ROOT=/root/backups/com.deviitor.cattr/module-deployer
+CATTR_CONFIG_DIR=/root/apps/com.deviitor.cattr
+
+APP_SERVICE=app
+APP_CONTAINER=cattr_app
+DB_CONTAINER=cattr_db
+DB_NAME=cattr
+HEALTH_URL=http://127.0.0.1:9180/status
+
+# Pin a clean upstream Cattr runtime image or an explicitly preserved local tag.
+# Do not use a previously derived image containing custom modules as the base.
+CATTR_RUNTIME_IMAGE=cattr-local:rollback-before-clock-in-20260901
+CATTR_BUILDER_IMAGE=registry.git.amazingcat.net/cattr/core/wolfi-os-image/cattr-dev@sha256:c0d41ea8c1d4b5e7a7534f53903b8fbe829db035ccc9c85283ea64765d713a93
+
+CANDIDATE_IMAGE_PREFIX=cattr-local:custom-modules
+ROLLBACK_IMAGE_PREFIX=cattr-local:rollback-custom-modules
+MIN_FREE_GB=8
+HEALTH_ATTEMPTS=30
+HEALTH_DELAY_SECONDS=2
+STARTUP_LOG_LINES=300

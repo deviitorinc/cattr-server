@@ -1,0 +1,221 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=../lib/common.sh
+source "$SCRIPT_DIR/../lib/common.sh"
+
+usage() {
+    cat <<'EOF'
+Usage: bin/deploy --config /absolute/path/to/module-deployer.conf [--yes]
+
+Builds, backs up, deploys, and verifies every registered custom Cattr module.
+Without --yes, activation requires typing yes after the disabled-stage checks.
+EOF
+}
+
+if ! parse_config_argument "$@"; then
+    usage
+    exit 0
+fi
+
+load_host_config
+load_modules
+
+RUNTIME_CHANGED=false
+
+for command in docker git curl unzip tar sha256sum awk grep sed stat flock; do
+    require_command "$command"
+done
+docker compose version >/dev/null
+docker buildx version >/dev/null
+
+install -d -m 700 "$STATE_DIR" "$BACKUP_ROOT"
+exec 9>"$STATE_DIR/deploy.lock"
+flock -n 9 || die 'Another module deployment is already running'
+
+[[ $(docker inspect "$APP_CONTAINER" --format '{{.State.Status}}') == running ]] ||
+    die 'Cattr application container is not running'
+[[ $(docker inspect "$DB_CONTAINER" --format '{{.State.Status}}') == running ]] ||
+    die 'Cattr database container is not running'
+
+free_kb=$(df -Pk /var/lib/docker | awk 'NR == 2 {print $4}')
+required_kb=$((MIN_FREE_GB * 1024 * 1024))
+((free_kb >= required_kb)) ||
+    die "Docker filesystem has less than ${MIN_FREE_GB} GiB free"
+
+DEPLOYMENT_ID=$(date -u +%Y%m%dT%H%M%SZ)
+BACKUP_DIR=$BACKUP_ROOT/$DEPLOYMENT_ID
+CANDIDATE_IMAGE=${CANDIDATE_IMAGE_PREFIX}:${DEPLOYMENT_ID}
+ROLLBACK_IMAGE=${ROLLBACK_IMAGE_PREFIX}:${DEPLOYMENT_ID}
+PREVIOUS_IMAGE_ID=$(docker inspect "$APP_CONTAINER" --format '{{.Image}}')
+PREVIOUS_OVERRIDE_PRESENT=false
+
+install -d -m 700 "$BACKUP_DIR"
+cp -p "$COMPOSE_FILE" "$BACKUP_DIR/docker-compose.yml.before"
+chmod 600 "$BACKUP_DIR/docker-compose.yml.before"
+if [[ -f $OVERRIDE_FILE ]]; then
+    cp -p "$OVERRIDE_FILE" "$BACKUP_DIR/docker-compose.modules.yml.before"
+    chmod 600 "$BACKUP_DIR/docker-compose.modules.yml.before"
+    PREVIOUS_OVERRIDE_PRESENT=true
+fi
+
+docker image tag "$PREVIOUS_IMAGE_ID" "$ROLLBACK_IMAGE"
+[[ $(docker image inspect "$ROLLBACK_IMAGE" --format '{{.Id}}') == "$PREVIOUS_IMAGE_ID" ]] ||
+    die 'Rollback image verification failed'
+
+log "Backing up database to $BACKUP_DIR/cattr.sql"
+umask 077
+docker exec "$DB_CONTAINER" sh -lc \
+    'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --quick --routines --triggers "$1"' \
+    sh "$DB_NAME" >"$BACKUP_DIR/cattr.sql"
+[[ -s $BACKUP_DIR/cattr.sql ]] || die 'Database dump is empty'
+tail -10 "$BACKUP_DIR/cattr.sql" | grep -F 'Dump completed on' >/dev/null ||
+    die 'Database dump completion marker is missing'
+sha256sum "$BACKUP_DIR/cattr.sql" >"$BACKUP_DIR/cattr.sql.sha256"
+sha256sum "$BACKUP_DIR/docker-compose.yml.before" \
+    >"$BACKUP_DIR/docker-compose.yml.before.sha256"
+
+BUILD_CONTEXT=$(mktemp -d "$STATE_DIR/build.${DEPLOYMENT_ID}.XXXXXX")
+cleanup() {
+    local exit_code=$?
+    trap - EXIT
+    set +e
+    if ((exit_code != 0)) && [[ $RUNTIME_CHANGED == true ]]; then
+        log 'Deployment check failed; restoring the previous application image'
+        if [[ $PREVIOUS_OVERRIDE_PRESENT == true && -f $BACKUP_DIR/docker-compose.modules.yml.before ]]; then
+            cp -p "$BACKUP_DIR/docker-compose.modules.yml.before" "$OVERRIDE_FILE"
+        else
+            write_override "$ROLLBACK_IMAGE" active
+        fi
+        compose_with_override up -d --no-deps --force-recreate "$APP_SERVICE"
+        wait_for_health
+        log 'Automatic application rollback attempted; database migrations were left unchanged'
+    fi
+    if [[ -n ${BUILD_CONTEXT:-} && -d $BUILD_CONTEXT ]]; then
+        rm -rf -- "$BUILD_CONTEXT"
+    fi
+    exit "$exit_code"
+}
+trap cleanup EXIT
+install -d "$BUILD_CONTEXT/modules"
+cp "$TOOL_ROOT/docker/assert-classes.php" "$BUILD_CONTEXT/assert-classes.php"
+: >"$BUILD_CONTEXT/provider-classes.txt"
+
+log 'Resolving and preparing locked module sources'
+for index in "${!MODULE_KEYS[@]}"; do
+    key=${MODULE_KEYS[$index]}
+    kind=${MODULE_SOURCE_KINDS[$index]}
+    source_url=${MODULE_SOURCE_URLS[$index]}
+    install_dir=${MODULE_INSTALL_DIRS[$index]}
+    destination=$BUILD_CONTEXT/modules/$install_dir
+    install -d "$destination"
+
+    if [[ $kind == git ]]; then
+        ref=${MODULE_SOURCE_REFS[$index]}
+        expected=${MODULE_SOURCE_COMMITS[$index]}
+        remote_sha=$(git ls-remote --heads "$source_url" "$ref" | awk 'NR == 1 {print $1}')
+        [[ $remote_sha == "$expected" ]] ||
+            die "$key: remote ref resolves to ${remote_sha:-nothing}, expected $expected"
+        checkout=$BUILD_CONTEXT/source-$key
+        git clone --quiet --single-branch --branch "$ref" "$source_url" "$checkout"
+        actual=$(git -C "$checkout" rev-parse HEAD)
+        [[ $actual == "$expected" ]] || die "$key: cloned commit mismatch"
+
+        read -r -a include_paths <<<"${MODULE_INCLUDE_PATHS_LIST[$index]}"
+        for include_path in "${include_paths[@]}"; do
+            [[ $include_path != /* && $include_path != *..* ]] ||
+                die "$key: unsafe MODULE_INCLUDE_PATHS entry: $include_path"
+            [[ -e $checkout/$include_path ]] ||
+                die "$key: included runtime path is missing: $include_path"
+        done
+        (cd "$checkout" && tar -cf - "${include_paths[@]}") |
+            tar -xf - -C "$destination"
+    else
+        archive=$BUILD_CONTEXT/$key.zip
+        curl --fail --location --silent --show-error "$source_url" -o "$archive"
+        actual_sha=$(sha256sum "$archive" | awk '{print $1}')
+        [[ $actual_sha == "${MODULE_SOURCE_SHA256S[$index]}" ]] ||
+            die "$key: release artifact checksum mismatch"
+        unzip -q "$archive" -d "$destination"
+    fi
+
+    [[ -f $destination/module.json ]] || die "$key: module.json is missing"
+    [[ -f $destination/composer.json ]] || die "$key: composer.json is missing"
+    printf '%s\n' "${MODULE_PROVIDER_CLASSES[$index]}" \
+        >>"$BUILD_CONTEXT/provider-classes.txt"
+done
+
+log "Building candidate image $CANDIDATE_IMAGE"
+docker buildx build --load \
+    --file "$TOOL_ROOT/docker/Dockerfile" \
+    --build-arg "CATTR_RUNTIME_IMAGE=$CATTR_RUNTIME_IMAGE" \
+    --build-arg "CATTR_BUILDER_IMAGE=$CATTR_BUILDER_IMAGE" \
+    --tag "$CANDIDATE_IMAGE" \
+    "$BUILD_CONTEXT"
+
+docker image inspect "$CANDIDATE_IMAGE" --format '{{.Id}}' \
+    >"$BACKUP_DIR/candidate-image-id.txt"
+
+env_args=()
+for env_file in "${MODULE_ENV_FILES[@]}"; do
+    env_args+=(--env-file "$env_file")
+done
+candidate_modules=$(docker run --rm --entrypoint /usr/bin/php82 \
+    "${env_args[@]}" "$CANDIDATE_IMAGE" /app/artisan module:list)
+for module_name in "${MODULE_CATTR_NAMES[@]}"; do
+    grep -F "[Enabled] $module_name" <<<"$candidate_modules" >/dev/null ||
+        die "Candidate discovery failed for $module_name"
+done
+printf '%s\n' "$candidate_modules" >"$BACKUP_DIR/candidate-module-list.txt"
+
+save_state
+
+log 'Deploying candidate with all custom-module side effects disabled'
+RUNTIME_CHANGED=true
+write_override "$CANDIDATE_IMAGE" disabled
+compose_with_override up -d --no-deps --force-recreate "$APP_SERVICE"
+verify_running_app "$BACKUP_DIR/disabled-stage" disabled
+
+{
+    printf 'deployment_id=%s\n' "$DEPLOYMENT_ID"
+    printf 'candidate_image=%s\n' "$CANDIDATE_IMAGE"
+    printf 'candidate_image_id=%s\n' "$(docker image inspect "$CANDIDATE_IMAGE" --format '{{.Id}}')"
+    printf 'previous_image_id=%s\n' "$PREVIOUS_IMAGE_ID"
+    printf 'rollback_image=%s\n' "$ROLLBACK_IMAGE"
+    printf 'backup_dir=%s\n' "$BACKUP_DIR"
+    printf 'status=disabled-stage-passed\n'
+    printf 'functional_test=not-run\n'
+} >"$BACKUP_DIR/deployment-report.txt"
+
+if [[ $ASSUME_YES != true ]]; then
+    printf '\nDisabled-stage deployment passed.\n'
+    printf 'Type yes to restore enable values from the protected environment files: '
+    read -r answer
+    if [[ $answer != yes ]]; then
+        log 'Candidate remains deployed with module side effects disabled'
+        log 'Run bin/activate with the same --config file after approval'
+        exit 0
+    fi
+fi
+
+log 'Restoring module enable values from protected environment files'
+write_override "$CANDIDATE_IMAGE" active
+compose_with_override up -d --no-deps --force-recreate "$APP_SERVICE"
+verify_running_app "$BACKUP_DIR/active-stage" present
+RUNTIME_CHANGED=false
+
+{
+    printf 'deployment_id=%s\n' "$DEPLOYMENT_ID"
+    printf 'candidate_image=%s\n' "$CANDIDATE_IMAGE"
+    printf 'candidate_image_id=%s\n' "$(docker image inspect "$CANDIDATE_IMAGE" --format '{{.Id}}')"
+    printf 'previous_image_id=%s\n' "$PREVIOUS_IMAGE_ID"
+    printf 'rollback_image=%s\n' "$ROLLBACK_IMAGE"
+    printf 'backup_dir=%s\n' "$BACKUP_DIR"
+    printf 'status=active-stage-passed\n'
+    printf 'functional_test=not-run\n'
+} >"$BACKUP_DIR/deployment-report.txt"
+
+log 'Deployment and safe automated checks passed'
+log "Report: $BACKUP_DIR/deployment-report.txt"
+log 'A real desktop clock-in and WhatsApp delivery test was not run'

@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+# shellcheck source=../lib/common.sh
+source "$SCRIPT_DIR/../lib/common.sh"
+
+usage() {
+    printf 'Usage: bin/verify --config /absolute/path/to/module-deployer.conf\n'
+}
+
+if ! parse_config_argument "$@"; then
+    usage
+    exit 0
+fi
+load_host_config
+load_modules
+
+for command in docker curl grep stat; do
+    require_command "$command"
+done
+
+verify_running_app
+docker inspect "$APP_CONTAINER" --format \
+    'status={{.State.Status}} image={{.Config.Image}} image_id={{.Image}} restart_count={{.RestartCount}}'
+log 'Read-only Cattr and custom-module checks passed'
+log 'No real desktop clock-in or external message was generated'
