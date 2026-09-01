@@ -1,0 +1,18 @@
+{
+    "name": "CattrClockInWebhook",
+    "alias": "cattr_clock_in_webhook",
+    "description": "Sends an at-most-once daily webhook when an employee clocks in through Cattr Desktop.",
+    "keywords": [
+        "clock-in",
+        "webhook"
+    ],
+    "active": 1,
+    "priority": 10,
+    "providers": [
+        "Modules\\CattrClockInWebhook\\Providers\\ModuleServiceProvider"
+    ],
+    "aliases": {},
+    "files": [],
+    "requires": [],
+    "minimumCoreVersion": "5.0"
+}

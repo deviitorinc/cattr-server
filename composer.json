@@ -1,0 +1,31 @@
+{
+    "name": "deviitor/cattr-clock-in-webhook-module",
+    "description": "Sends an at-most-once daily webhook when an employee clocks in through Cattr Desktop.",
+    "type": "laravel-module",
+    "license": "SSPL-1.0",
+    "authors": [
+        {
+            "name": "Deviitor",
+            "homepage": "https://github.com/deviitorinc"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Modules\\CattrClockInWebhook\\": ""
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Modules\\CattrClockInWebhook\\Tests\\": "Tests/"
+        }
+    },
+    "require": {
+        "php": "~8.2"
+    },
+    "archive": {
+        "exclude": [
+            "/.github",
+            "/Tests"
+        ]
+    }
+}

@@ -1,0 +1,52 @@
+name: Clock-in webhook module
+
+on:
+  push:
+    branches:
+      - modules/clock-in-webhook
+    tags:
+      - clock-in-webhook-v*
+
+permissions:
+  contents: write
+
+jobs:
+  validate-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+
+      - name: Validate package metadata
+        run: composer validate --strict --no-check-publish
+
+      - name: Lint PHP files
+        run: find Config Database Jobs Providers Services Subscribers Tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Build release archive
+        if: startsWith(github.ref, 'refs/tags/clock-in-webhook-v')
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#clock-in-webhook-v}"
+          artifact="cattr-clock-in-webhook-module-${version}.zip"
+          zip -qr "$artifact" Config Database Jobs Providers Services Subscribers composer.json module.json README.md
+          sha256sum "$artifact" > "${artifact}.sha256"
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/clock-in-webhook-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#clock-in-webhook-v}"
+          artifact="cattr-clock-in-webhook-module-${version}.zip"
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
+            gh release create "$GITHUB_REF_NAME" --title "Clock-in webhook module ${version}" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" "$artifact" "${artifact}.sha256" --clobber
