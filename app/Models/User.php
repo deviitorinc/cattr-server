@@ -27,6 +27,7 @@ use Illuminate\Notifications\Notifiable;
 use Hash;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Sanctum\PersonalAccessToken;
+use Modules\Employee\Traits\HasEmployee;
 
 /**
  * App\Models\User
@@ -125,6 +126,7 @@ class User extends Authenticatable
     use HasRole;
     use HasFactory;
     use HasApiTokens;
+    use HasEmployee;
 
     /**
      * table name from database

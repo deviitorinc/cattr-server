@@ -21,6 +21,8 @@ use App\Policies\TaskPolicy;
 use App\Policies\TimeIntervalPolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Modules\Employee\Entities\Employee;
+use Modules\Employee\Policies\EmployeePolicy;
 
 class AuthServiceProvider extends ServiceProvider
 {
@@ -30,6 +32,7 @@ class AuthServiceProvider extends ServiceProvider
      * @var array
      */
     protected $policies = [
+        Employee::class => EmployeePolicy::class,
         ProjectGroup::class => ProjectGroupPolicy::class,
         Project::class => ProjectPolicy::class,
         Task::class => TaskPolicy::class,

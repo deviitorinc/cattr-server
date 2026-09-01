@@ -1,0 +1,52 @@
+# Cattr Docker Compose with Public Image
+
+version: '3.9'
+
+services:
+  app:
+    container_name: cattr_app
+    image: registry.git.amazingcat.net/cattr/core/app:latest
+    restart: always
+    ports:
+      - "9180:80"
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - /root/data/com.deviitor.cattr/storage:/app/storage
+    networks:
+      - default
+#      - cattr_network
+      - apps_https_network
+    environment:
+      - DB_USERNAME=root
+      - DB_PASSWORD=3zCqo5ved5OU
+      - APP_KEY=base64:lg1m/12MHBbBpiWTXjot98Q9MP/nSzPrvLEU2beD+2Y=
+      # Admin user only created on initial run with the following credentials, change them if needed
+      - APP_ADMIN_EMAIL=admin@cattr.app
+      - APP_ADMIN_PASSWORD=password
+      - APP_ADMIN_NAME=Admin
+
+  db:
+    container_name: cattr_db
+    image: percona:8.0
+    restart: always
+    ports:
+      - "9106:3306"
+    environment:
+      - MYSQL_DATABASE=cattr
+      - MYSQL_ROOT_PASSWORD=3zCqo5ved5OU
+    cap_add:
+      - SYS_NICE
+    volumes:
+      - /root/data/com.deviitor.cattr/data:/var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '--password=3zCqo5ved5OU', '-u', 'root']
+      timeout: 20s
+      retries: 10
+
+networks:
+#    cattr_network:
+#        driver: bridge
+    apps_https_network:
+        external: true

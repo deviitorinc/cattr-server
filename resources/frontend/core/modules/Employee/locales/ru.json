@@ -1,0 +1,24 @@
+{
+    "navigation": {
+        "employees": "Employees"
+    },
+    "employees": {
+        "grid-title": "Employees",
+        "crud-title": "Employee"
+    },
+    "field": {
+        "name": "Name",
+        "full_name": "Name",
+        "email": "Email",
+        "employee_id": "Employee ID",
+        "date_of_joined": "Date of Joined",
+        "user": "User",
+        "select_user": "Select User",
+        "no_available_users": "No available users"
+    },
+    "control": {
+        "select_user": "Select User",
+        "clear": "Clear",
+        "ok": "OK"
+    }
+}
