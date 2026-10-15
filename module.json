@@ -1,9 +1,10 @@
 {
     "name": "CattrClockInWebhook",
     "alias": "cattr_clock_in_webhook",
-    "description": "Sends an at-most-once daily webhook when an employee clocks in through Cattr Desktop.",
+    "description": "Sends clock-in and live task-start webhooks for Cattr Desktop tracking.",
     "keywords": [
         "clock-in",
+        "task-start",
         "webhook"
     ],
     "active": 1,

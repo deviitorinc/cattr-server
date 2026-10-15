@@ -1,6 +1,6 @@
 {
     "name": "deviitor/cattr-clock-in-webhook-module",
-    "description": "Sends an at-most-once daily webhook when an employee clocks in through Cattr Desktop.",
+    "description": "Sends clock-in and live task-start webhooks for Cattr Desktop tracking.",
     "type": "laravel-module",
     "license": "SSPL-1.0",
     "authors": [
