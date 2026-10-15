@@ -14,6 +14,14 @@ are ignored. The module records one attempt per user and Colombo calendar day.
 The queued job has one attempt; a network exception is recorded as `unknown`
 and is never retried automatically.
 
+The same module can independently send task-start alerts. For the first live
+automatic interval of a Colombo day and each subsequent task switch, it sends
+the person name, task name, and source interval ID to Automata's task-start
+endpoint. Repeated intervals on the same task, manual entries, and intervals
+created for another user are ignored. The interval ID is unique in the local
+attempt table and deduplicated independently by Automata. A switch back to a
+previous task counts as a new task start.
+
 ## Runtime configuration
 
 Set these values only in the Cattr server's untracked environment:
@@ -23,6 +31,8 @@ CATTR_CLOCK_IN_WEBHOOK_ENABLED=true
 CATTR_CLOCK_IN_WEBHOOK_URL=https://automata.example.com/webhooks/cattr/clock-in
 CATTR_CLOCK_IN_WEBHOOK_TOKEN=replace-with-the-server-side-secret
 CATTR_CLOCK_IN_WEBHOOK_TIMEZONE=Asia/Colombo
+CATTR_TASK_START_WEBHOOK_ENABLED=true
+CATTR_TASK_START_WEBHOOK_URL=https://automata.example.com/webhooks/cattr/task-start
 ```
 
 Optional timeouts:

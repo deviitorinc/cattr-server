@@ -4,12 +4,14 @@ namespace Modules\CattrClockInWebhook\Subscribers;
 
 use App\Models\TimeInterval;
 use Modules\CattrClockInWebhook\Services\RecordClockIn;
+use Modules\CattrClockInWebhook\Services\RecordTaskStart;
 
 class EventObserver
 {
     public function intervalCreation(TimeInterval $interval): void
     {
         app(RecordClockIn::class)->handle($interval);
+        app(RecordTaskStart::class)->handle($interval);
     }
 
     public function subscribe(): array
